@@ -1,64 +1,41 @@
-# This is the mods.toml file for the SuperMom mod.
-# It contains the data relating to the loading of the mod.
+# This is the mods.toml file using placeholders for build script expansion.
 
-# The name of the mod loader type to load - for regular FML @Mod mods it should be javafml
 modLoader="javafml" #mandatory
-
-# A version range to match for said mod loader - Forge for 1.20.1 is version 47+
-loaderVersion="[47,)" #mandatory
-
-# The license for your mod. Review your options at https://choosealicense.com/.
-license="ARR - All Rights Reserved" # Default is All Rights Reserved
-
-# A URL to refer people to when problems occur with this mod
+# Use the placeholder defined in gradle.properties
+loaderVersion="${loader_version_range}" #mandatory
+# Use the placeholder defined in gradle.properties
+license="${mod_license}"
+# You can keep this hardcoded or make it a property if you prefer
 issueTrackerURL="https://github.com/alafortu/SuperMom_mcraft_mod/issues" #optional
 
-# A list of mods - must contain at least one entry.
 [[mods]] #mandatory
-# The modid of the mod
-modId="supermom" #mandatory - MUST match the @Mod annotation and dependencies below
-
-# The version number of the mod - ${file.jarVersion} is recommended for automatic build substitution
-version="${file.jarVersion}" #mandatory
-
-# A display name for the mod
-displayName="SuperMom" #mandatory
-
-# A URL for the "homepage" for this mod, displayed in the mod UI
+# Use the placeholder defined in gradle.properties
+modId="${mod_id}" #mandatory
+# Use the placeholder defined in gradle.properties - THIS replaces file.jarVersion here
+version="${mod_version}" #mandatory
+# Use the placeholder defined in gradle.properties
+displayName="${mod_name}" #mandatory
+# You can keep this hardcoded or make it a property if you prefer
 displayURL="https://github.com/alafortu/SuperMom_mcraft_mod" #optional
+# Use the placeholder defined in gradle.properties
+authors="${mod_authors}" #optional
+# Use the placeholder defined in gradle.properties
+description='''${mod_description}''' #mandatory
 
-# A file name (in the root of the mod JAR) containing a logo for display
-# logoFile="supermom_logo.png" #optional
-
-# A text field displayed in the mod UI
-# credits="" #optional
-
-# A text field displayed in the mod UI
-authors="alafortu" #optional
-
-# The description text for the mod (multi line!) (#mandatory)
-description='''
-An intelligent AI companion who is funny and fiercely protective. Your SuperMom! Built with Forge for Minecraft.
-'''
-
-# Specify required dependencies
-# Dependencies are optional unless you need another mod API, but Forge and Minecraft are standard
-[[dependencies.supermom]] # Must use your modId here
+# Specify required dependencies using placeholders
+# IMPORTANT: The dependency block name itself must use the placeholder!
+[[dependencies.${mod_id}]] #Optional but standard
     modId="forge" #mandatory
     mandatory=true #mandatory
-    # Specify the acceptable Forge version range
-    versionRange="[47,)" #mandatory - Matches loaderVersion for 1.20.1
+    # Use the placeholder defined in gradle.properties
+    versionRange="${forge_version_range}" #mandatory
     ordering="NONE"
     side="BOTH"
 
-[[dependencies.supermom]] # Must use your modId here
+[[dependencies.${mod_id}]] #Optional but standard
     modId="minecraft" #mandatory
     mandatory=true #mandatory
-    # Specify the acceptable Minecraft version range - [inclusive, exclusive)
-    versionRange="[1.20.1,1.20.2)" #mandatory - For 1.20.1 exactly
+    # Use the placeholder defined in gradle.properties
+    versionRange="${minecraft_version_range}" #mandatory
     ordering="NONE"
     side="BOTH"
-
-# Features are specific properties of the game environment, that you may want to declare you require. Uncomment if needed.
-# [features.supermom]
-# openGLVersion="[3.2,)"

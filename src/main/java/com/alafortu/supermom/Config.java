@@ -1,4 +1,4 @@
-package com.example.examplemod;
+package com.alafortu.supermom;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
@@ -7,6 +7,8 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.apache.logging.log4j.LogManager; // Added import
+import org.apache.logging.log4j.Logger; // Added import
 
 import java.util.Collections;
 import java.util.List;
@@ -15,9 +17,12 @@ import java.util.stream.Collectors;
 
 // An example config class. This is not required, but it's a good idea to have one to keep your config organized.
 // Demonstrates how to use Forge's config APIs
-@Mod.EventBusSubscriber(modid = ExampleMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+@Mod.EventBusSubscriber(modid = SuperMomMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class Config
 {
+    // Directly reference a logger instance for this class
+    private static final Logger LOGGER = LogManager.getLogger();
+
     private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
 
     private static final ForgeConfigSpec.BooleanValue LOG_DIRT_BLOCK = BUILDER
@@ -37,12 +42,19 @@ public class Config
             .comment("A list of items to log on common setup.")
             .defineListAllowEmpty("items", List.of("minecraft:iron_ingot"), Config::validateItemName);
 
+    // --- SuperMom LLM Config ---
+    private static final ForgeConfigSpec.ConfigValue<String> OLLAMA_URL = BUILDER
+            .comment("The URL for the Ollama API endpoint (e.g., http://localhost:11434/api/generate)")
+            .define("ollamaUrl", "http://localhost:11434/api/generate"); // Default value
+
     static final ForgeConfigSpec SPEC = BUILDER.build();
 
+    // --- Loaded Config Values ---
     public static boolean logDirtBlock;
     public static int magicNumber;
     public static String magicNumberIntroduction;
     public static Set<Item> items;
+    public static String ollamaUrl; // Variable to hold the loaded Ollama URL
 
     private static boolean validateItemName(final Object obj)
     {
@@ -60,5 +72,15 @@ public class Config
         items = ITEM_STRINGS.get().stream()
                 .map(itemName -> ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemName)))
                 .collect(Collectors.toSet());
+
+        // Load SuperMom specific config
+        ollamaUrl = OLLAMA_URL.get();
+        // Basic validation: Ensure it's not empty, could add more robust URL check later
+        if (ollamaUrl == null || ollamaUrl.isBlank()) {
+            LOGGER.warn("Ollama URL in config is empty, using default: http://localhost:11434/api/generate"); // Use Config.LOGGER
+            ollamaUrl = "http://localhost:11434/api/generate"; // Fallback to default
+        } else {
+             LOGGER.info("Loaded Ollama URL from config: {}", ollamaUrl); // Use Config.LOGGER
+        }
     }
 }
