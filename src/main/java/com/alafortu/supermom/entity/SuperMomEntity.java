@@ -25,7 +25,7 @@ import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions; // Added import
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.monster.Monster; // Import needed for MeleeAttackGoal fix
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item; // Added for ForageCropGoal drop check
 import net.minecraft.world.item.ItemStack;
@@ -162,7 +162,7 @@ public class SuperMomEntity extends PathfinderMob {
                 return false;
             }
             // Ne pas rentrer si on a une cible hostile
-            if (this.superMom.getTarget() != null && this.superMom.getTarget().getType().getCategory().isFriendly() == false) {
+            if (this.superMom.getTarget() != null && this.superMom.getTarget() instanceof Monster) { // Check for Monster specifically
                  return false;
             }
 
@@ -171,7 +171,7 @@ public class SuperMomEntity extends PathfinderMob {
                  // Si le goal n'est pas actif, on ne peut pas l'utiliser pour le moment (évite ajout multiple)
                  // On pourrait vouloir une logique différente ici, ex: l'ajouter s'il n'est pas là
                  // Pour l'instant, on suppose qu'il est ajouté par la méthode goHome()
-                return false;
+                 return false;
             }
             this.pathFound = this.findNearestBlock();
             return this.pathFound;
@@ -184,7 +184,7 @@ public class SuperMomEntity extends PathfinderMob {
                 return false;
             }
             // Arrêter si on acquiert une cible hostile
-            if (this.superMom.getTarget() != null && this.superMom.getTarget().getType().getCategory().isFriendly() == false) {
+            if (this.superMom.getTarget() != null && this.superMom.getTarget() instanceof Monster) { // Check for Monster specifically
                  return false;
             }
             boolean isActive = this.superMom.goalSelector.getRunningGoals().anyMatch(goal -> goal.getGoal() == this);
@@ -216,8 +216,8 @@ public class SuperMomEntity extends PathfinderMob {
         public void tick() {
             // Arrêter si on défend le joueur ou si cible hostile
             if ((this.superMom.ownerHurtByTargetGoal != null && this.superMom.ownerHurtByTargetGoal.isActive) ||
-                (this.superMom.getTarget() != null && !this.superMom.getTarget().getType().getCategory().isFriendly())) {
-                return;
+                (this.superMom.getTarget() != null && this.superMom.getTarget() instanceof Monster)) { // Check for Monster specifically
+                 return;
             }
             BlockPos currentHome = this.superMom.getHomePosition();
             if (currentHome != null && this.blockPos != null && !this.blockPos.equals(currentHome)) {
@@ -288,13 +288,13 @@ public class SuperMomEntity extends PathfinderMob {
 
        @Override
        public boolean canUse() {
-           // Ne pas suivre si SuperMom a une cible d'attaque
-           if (this.superMom.getTarget() != null) {
-               return false;
+           // Ne pas suivre si SuperMom a une cible d'attaque (monstre)
+           if (this.superMom.getTarget() instanceof Monster) {
+                return false;
            }
            // Ne pas suivre si OwnerHurtByTargetGoal est actif (priorité défense)
            if (this.superMom.ownerHurtByTargetGoal != null && this.superMom.ownerHurtByTargetGoal.isActive) {
-               return false;
+                return false;
            }
            this.targetPlayer = this.superMom.getOwner(); // Suivre le propriétaire
             return this.targetPlayer != null && !this.targetPlayer.isSpectator() && this.superMom.distanceToSqr(this.targetPlayer) > this.stopDistanceSq; // Activer si plus loin que stopDist
@@ -302,7 +302,7 @@ public class SuperMomEntity extends PathfinderMob {
 
        @Override
        public boolean canContinueToUse() {
-            if (this.superMom.getTarget() != null || this.targetPlayer == null || this.targetPlayer.isSpectator()) {
+            if (this.superMom.getTarget() instanceof Monster || this.targetPlayer == null || this.targetPlayer.isSpectator()) {
                 return false;
             }
             if (!this.targetPlayer.isAlive()) {
@@ -314,7 +314,7 @@ public class SuperMomEntity extends PathfinderMob {
             }
             // Ne pas continuer si OwnerHurtByTargetGoal s'active
             if (this.superMom.ownerHurtByTargetGoal != null && this.superMom.ownerHurtByTargetGoal.isActive) {
-               return false;
+                return false;
            }
             // Continuer si on est dans une portée raisonnable (évite de suivre à travers le monde entier si la téléportation échoue)
             return this.superMom.distanceToSqr(this.targetPlayer) <= (this.startDistanceSq * 4.0D); // Ex: max 2*startDist
@@ -338,16 +338,16 @@ public class SuperMomEntity extends PathfinderMob {
        @Override
        public void tick() {
            if (this.targetPlayer != null) {
-               this.superMom.getLookControl().setLookAt(this.targetPlayer, 10.0F, (float)this.superMom.getMaxHeadXRot());
-               if (--this.timeToRecalcPath <= 0) {
-                   this.timeToRecalcPath = this.adjustedTickDelay(10);
-                   // Continuer à se déplacer vers le joueur s'il est plus loin que la distance d'arrêt + une petite marge
-                   if (this.superMom.distanceToSqr(this.targetPlayer) > (this.stopDistanceSq + 1.0D)) {
-                        this.navigation.moveTo(this.targetPlayer, this.speedModifier);
-                   } else {
-                        this.navigation.stop(); // Arrêter si on est assez proche
-                   }
-               }
+                this.superMom.getLookControl().setLookAt(this.targetPlayer, 10.0F, (float)this.superMom.getMaxHeadXRot());
+                if (--this.timeToRecalcPath <= 0) {
+                    this.timeToRecalcPath = this.adjustedTickDelay(10);
+                    // Continuer à se déplacer vers le joueur s'il est plus loin que la distance d'arrêt + une petite marge
+                    if (this.superMom.distanceToSqr(this.targetPlayer) > (this.stopDistanceSq + 1.0D)) {
+                         this.navigation.moveTo(this.targetPlayer, this.speedModifier);
+                    } else {
+                         this.navigation.stop(); // Arrêter si on est assez proche
+                    }
+                }
            }
        }
     } // Fin FollowPlayerGoal
@@ -367,17 +367,17 @@ public class SuperMomEntity extends PathfinderMob {
        @Override
        public boolean canUse() {
             // Ne pas activer si on a une cible d'attaque ou si on défend
-            if (this.superMom.getTarget() != null) return false;
+            if (this.superMom.getTarget() instanceof Monster) return false; // Check specifically for Monster
             if (this.superMom.ownerHurtByTargetGoal != null && this.superMom.ownerHurtByTargetGoal.isActive) return false;
 
 
            this.targetPlayer = this.superMom.getOwner();
            if (this.targetPlayer == null || !this.targetPlayer.isAlive() || !this.targetPlayer.getFoodData().needsFood()) {
-               return false;
+                return false;
            }
            // Vérifier si le joueur est proche
            if (this.superMom.distanceToSqr(this.targetPlayer) > 64.0D) { // Ne pas activer si trop loin (carré de 8 blocs)
-               return false;
+                return false;
            }
            // Vérifier si SuperMom a de la nourriture
            return this.superMom.findInInventory(ItemStack::isEdible) != -1;
@@ -387,6 +387,8 @@ public class SuperMomEntity extends PathfinderMob {
        public boolean canContinueToUse() {
             // Arrêter si on doit défendre
             if (this.superMom.ownerHurtByTargetGoal != null && this.superMom.ownerHurtByTargetGoal.isActive) return false;
+            // Arrêter si on cible un monstre
+            if (this.superMom.getTarget() instanceof Monster) return false;
 
            return this.targetPlayer != null
                    && this.targetPlayer.isAlive()
@@ -413,15 +415,16 @@ public class SuperMomEntity extends PathfinderMob {
        @Override
        public void tick() {
            if (this.targetPlayer == null) return;
-            // Arrêter si on doit défendre
+            // Arrêter si on doit défendre ou si on cible un monstre
             if (this.superMom.ownerHurtByTargetGoal != null && this.superMom.ownerHurtByTargetGoal.isActive) return;
+            if (this.superMom.getTarget() instanceof Monster) return;
 
 
            this.superMom.getLookControl().setLookAt(this.targetPlayer, 10.0F, (float) this.superMom.getMaxHeadXRot());
 
            if (--this.timeToRecalcPath <= 0) {
-               this.timeToRecalcPath = this.adjustedTickDelay(10);
-               this.superMom.getNavigation().moveTo(this.targetPlayer, 1.0D);
+                this.timeToRecalcPath = this.adjustedTickDelay(10);
+                this.superMom.getNavigation().moveTo(this.targetPlayer, 1.0D);
            }
 
            // Si assez proche, essayer de nourrir
@@ -449,17 +452,17 @@ public class SuperMomEntity extends PathfinderMob {
        @Override
        public boolean canUse() {
             // Ne pas activer si on a une cible d'attaque ou si on défend
-            if (this.superMom.getTarget() != null) return false;
+            if (this.superMom.getTarget() instanceof Monster) return false; // Check specifically for Monster
              if (this.superMom.ownerHurtByTargetGoal != null && this.superMom.ownerHurtByTargetGoal.isActive) return false;
 
 
            this.targetPlayer = this.superMom.getOwner();
            if (this.targetPlayer == null || !this.targetPlayer.isAlive() || this.targetPlayer.getHealth() >= this.targetPlayer.getMaxHealth() * HEAL_THRESHOLD_PERCENT) {
-               return false;
+                return false;
            }
             // Vérifier si le joueur est proche
            if (this.superMom.distanceToSqr(this.targetPlayer) > 64.0D) { // Ne pas activer si trop loin (carré de 8 blocs)
-               return false;
+                return false;
            }
            // Vérifier si SuperMom a une potion de soin
            return this.superMom.findInInventory(stack -> stack.is(Items.POTION) && (PotionUtils.getPotion(stack) == Potions.HEALING || PotionUtils.getPotion(stack) == Potions.STRONG_HEALING)) != -1;
@@ -469,6 +472,8 @@ public class SuperMomEntity extends PathfinderMob {
        public boolean canContinueToUse() {
             // Arrêter si on doit défendre
             if (this.superMom.ownerHurtByTargetGoal != null && this.superMom.ownerHurtByTargetGoal.isActive) return false;
+            // Arrêter si on cible un monstre
+            if (this.superMom.getTarget() instanceof Monster) return false;
 
            return this.targetPlayer != null
                    && this.targetPlayer.isAlive()
@@ -495,15 +500,16 @@ public class SuperMomEntity extends PathfinderMob {
        @Override
        public void tick() {
            if (this.targetPlayer == null) return;
-            // Arrêter si on doit défendre
+            // Arrêter si on doit défendre ou si on cible un monstre
             if (this.superMom.ownerHurtByTargetGoal != null && this.superMom.ownerHurtByTargetGoal.isActive) return;
+            if (this.superMom.getTarget() instanceof Monster) return;
 
 
            this.superMom.getLookControl().setLookAt(this.targetPlayer, 10.0F, (float) this.superMom.getMaxHeadXRot());
 
            if (--this.timeToRecalcPath <= 0) {
-               this.timeToRecalcPath = this.adjustedTickDelay(10);
-               this.superMom.getNavigation().moveTo(this.targetPlayer, 1.0D);
+                this.timeToRecalcPath = this.adjustedTickDelay(10);
+                this.superMom.getNavigation().moveTo(this.targetPlayer, 1.0D);
            }
 
            // Si assez proche, essayer de soigner
@@ -534,10 +540,9 @@ public class SuperMomEntity extends PathfinderMob {
        public boolean canUse() {
            // Conditions de base: pas de cible hostile, jour, proche du joueur, joueur en sécurité
            Player owner = this.superMom.getOwner();
-           if (this.superMom.getTarget() != null || !this.superMom.level().isDay() || owner == null || this.superMom.distanceToSqr(owner) > RESOURCE_GATHERING_RANGE_SQ) {
-               return false;
+           if (this.superMom.getTarget() instanceof Monster || !this.superMom.level().isDay() || owner == null || this.superMom.distanceToSqr(owner) > RESOURCE_GATHERING_RANGE_SQ) {
+                return false;
            }
-           // CORRECTION: Utiliser .isActive
            if (this.superMom.ownerHurtByTargetGoal != null && this.superMom.ownerHurtByTargetGoal.isActive) {
                 return false; // Ne pas ramasser si le propriétaire est attaqué
            }
@@ -550,10 +555,9 @@ public class SuperMomEntity extends PathfinderMob {
        public boolean canContinueToUse() {
            // Continuer si la cible existe, est vivante, pas trop loin, et conditions de base toujours valides
             Player owner = this.superMom.getOwner();
-           if (this.superMom.getTarget() != null || !this.superMom.level().isDay() || owner == null || this.superMom.distanceToSqr(owner) > RESOURCE_GATHERING_RANGE_SQ * 1.5) { // Marge un peu plus grande
-               return false;
+           if (this.superMom.getTarget() instanceof Monster || !this.superMom.level().isDay() || owner == null || this.superMom.distanceToSqr(owner) > RESOURCE_GATHERING_RANGE_SQ * 1.5) { // Marge un peu plus grande
+                return false;
            }
-            // CORRECTION: Utiliser .isActive
             if (this.superMom.ownerHurtByTargetGoal != null && this.superMom.ownerHurtByTargetGoal.isActive) {
                 return false;
            }
@@ -564,10 +568,10 @@ public class SuperMomEntity extends PathfinderMob {
        public void start() {
            this.timeToRecalcPath = 0;
            if (this.targetFoodItem != null) {
-               SuperMomEntity.LOGGER.debug("GatherFoodGoal started. Target: {} at {}", this.targetFoodItem.getItem().getDescriptionId(), this.targetFoodItem.blockPosition());
-               this.superMom.getNavigation().moveTo(this.targetFoodItem, this.speedModifier);
+                SuperMomEntity.LOGGER.debug("GatherFoodGoal started. Target: {} at {}", this.targetFoodItem.getItem().getDescriptionId(), this.targetFoodItem.blockPosition());
+                this.superMom.getNavigation().moveTo(this.targetFoodItem, this.speedModifier);
            } else {
-               SuperMomEntity.LOGGER.warn("GatherFoodGoal started but targetFoodItem is null!");
+                SuperMomEntity.LOGGER.warn("GatherFoodGoal started but targetFoodItem is null!");
            }
        }
 
@@ -582,20 +586,20 @@ public class SuperMomEntity extends PathfinderMob {
        @Override
        public void tick() {
            if (this.targetFoodItem != null && this.targetFoodItem.isAlive()) {
-               this.superMom.getLookControl().setLookAt(this.targetFoodItem, 10.0F, (float) this.superMom.getMaxHeadXRot());
-               if (--this.timeToRecalcPath <= 0) {
-                   this.timeToRecalcPath = this.adjustedTickDelay(10);
-                   // Si on est loin (>1.5 bloc), on continue de bouger
-                   if (this.superMom.distanceToSqr(this.targetFoodItem) > 1.5D * 1.5D) {
-                       this.superMom.getNavigation().moveTo(this.targetFoodItem, this.speedModifier);
-                   } else {
-                       // Si on est proche, on arrête de bouger et on attend que la logique de pickup vanilla fasse effet
-                       this.superMom.getNavigation().stop();
-                   }
-               }
+                this.superMom.getLookControl().setLookAt(this.targetFoodItem, 10.0F, (float) this.superMom.getMaxHeadXRot());
+                if (--this.timeToRecalcPath <= 0) {
+                    this.timeToRecalcPath = this.adjustedTickDelay(10);
+                    // Si on est loin (>1.5 bloc), on continue de bouger
+                    if (this.superMom.distanceToSqr(this.targetFoodItem) > 1.5D * 1.5D) {
+                        this.superMom.getNavigation().moveTo(this.targetFoodItem, this.speedModifier);
+                    } else {
+                        // Si on est proche, on arrête de bouger et on attend que la logique de pickup vanilla fasse effet
+                        this.superMom.getNavigation().stop();
+                    }
+                }
            } else {
-               // La cible a disparu, on arrête (canContinueToUse devrait devenir faux)
-               this.targetFoodItem = null; // Assurer que la cible est nulle
+                // La cible a disparu, on arrête (canContinueToUse devrait devenir faux)
+                this.targetFoodItem = null; // Assurer que la cible est nulle
            }
        }
 
@@ -622,18 +626,18 @@ public class SuperMomEntity extends PathfinderMob {
            double closestDistSq = Double.MAX_VALUE;
 
            for (ItemEntity itemEntity : nearbyItems) {
-               double distSq = this.superMom.distanceToSqr(itemEntity);
-               if (distSq < closestDistSq) {
-                   closestDistSq = distSq;
-                   closestItem = itemEntity;
-               }
+                double distSq = this.superMom.distanceToSqr(itemEntity);
+                if (distSq < closestDistSq) {
+                    closestDistSq = distSq;
+                    closestItem = itemEntity;
+                }
            }
            return closestItem;
        }
     } // Fin GatherFoodGoal
 
 
-    // --- Goal for Hunting Passive Animals --- CORRECTED ---
+    // --- Goal for Hunting Passive Animals --- CORRECTED v3 ---
     class HuntForMeatGoal extends Goal {
        private final SuperMomEntity superMom;
        private LivingEntity targetAnimal;
@@ -667,7 +671,7 @@ public class SuperMomEntity extends PathfinderMob {
            Player owner = this.superMom.getOwner();
            if (this.currentState != State.SEARCHING || // Seulement chercher si on ne fait rien d'autre dans ce goal
                !this.superMom.level().isDay() ||
-               this.superMom.getTarget() != null || // Ne pas chasser si déjà une cible (pourrait être hostile)
+               this.superMom.getTarget() instanceof Monster || // Ne pas chasser si déjà une cible hostile
                this.superMom.autonomousActionCooldown > 0 ||
                owner == null ||
                this.superMom.distanceToSqr(owner) > RESOURCE_GATHERING_RANGE_SQ || // Vérifier distance au joueur (25 blocs)
@@ -707,10 +711,10 @@ public class SuperMomEntity extends PathfinderMob {
                owner == null ||
                this.superMom.distanceToSqr(owner) > RESOURCE_GATHERING_RANGE_SQ * 1.5 || // Marge pour ne pas arrêter direct si le joueur bouge un peu
                (this.superMom.ownerHurtByTargetGoal != null && this.superMom.ownerHurtByTargetGoal.isActive) ||
-               this.superMom.getTarget() != null && this.superMom.getTarget() != this.targetAnimal) // Si une autre cible (hostile) a pris le dessus
-               {
-                   return false;
-               }
+               (this.superMom.getTarget() instanceof Monster && this.superMom.getTarget() != this.targetAnimal)) // Si une autre cible hostile a pris le dessus
+                {
+                    return false;
+                }
 
            // Si collecting, continuer tant qu'il y a des drops et du temps
            if (this.currentState == State.COLLECTING) {
@@ -722,7 +726,8 @@ public class SuperMomEntity extends PathfinderMob {
            if (this.currentState == State.ATTACKING) {
                return this.targetAnimal != null
                        && this.targetAnimal.isAlive()
-                       && this.superMom.getTarget() == this.targetAnimal; // Vérifier que SuperMom cible toujours notre animal
+                       // Retiré: && this.superMom.getTarget() == this.targetAnimal; // La cible interne peut changer à cause d'un autre goal
+                       ; // On continue tant que notre cible spécifique est vivante
            }
 
            return false; // Ne devrait pas arriver
@@ -731,12 +736,14 @@ public class SuperMomEntity extends PathfinderMob {
        @Override
        public void start() {
            if (this.targetAnimal != null) {
-               LOGGER.debug("HuntForMeatGoal started. Targeting: {}", this.targetAnimal.getType().getDescription().getString());
-               this.currentState = State.ATTACKING;
-               this.superMom.setTarget(this.targetAnimal); // Important pour que MeleeAttackGoal (Prio 1) prenne le relais
-               this.superMom.resetAutonomousCooldown(); // Cooldown pour démarrer l'action
+                LOGGER.debug("HuntForMeatGoal started. Targeting: {}", this.targetAnimal.getType().getDescription().getString());
+                this.currentState = State.ATTACKING;
+                // IMPORTANT: On définit la cible pour que MeleeAttackGoal puisse agir (si on le remet)
+                // OU pour la logique d'attaque interne si MeleeAttackGoal est retiré
+                this.superMom.setTarget(this.targetAnimal);
+                this.superMom.resetAutonomousCooldown(); // Cooldown pour démarrer l'action
            } else {
-               LOGGER.error("HuntForMeatGoal started without a targetAnimal! This should not happen.");
+                LOGGER.error("HuntForMeatGoal started without a targetAnimal! This should not happen.");
            }
        }
 
@@ -759,45 +766,59 @@ public class SuperMomEntity extends PathfinderMob {
        @Override
        public void tick() {
            if (this.currentState == State.ATTACKING) {
-               // Vérifier si la cible est morte ou invalide
-               if (this.targetAnimal == null || !this.targetAnimal.isAlive()) {
-                   LOGGER.debug("HuntForMeatGoal.tick: Target killed or lost. Switching to COLLECTING.");
-                   this.lastTargetPos = this.targetAnimal != null ? this.targetAnimal.blockPosition() : this.superMom.blockPosition(); // Garder la dernière position connue
-                   LivingEntity currentTarget = this.superMom.getTarget(); // Sauvegarder la cible actuelle
-                   this.targetAnimal = null; // Oublier notre cible passive
-                   // Ne pas effacer la cible de SuperMom ici, car MeleeAttackGoal pourrait encore être actif une fraction de seconde
-                   // if (currentTarget == this.targetAnimal) { // Only clear if it was our target
-                   //     this.superMom.setTarget(null);
-                   // }
-                   this.superMom.getNavigation().stop();
-                   this.currentState = State.COLLECTING;
-                   this.collectingTicks = MAX_COLLECTING_TICKS;
-                   collectDrops(); // Essayer de collecter immédiatement
-                   return;
-               }
+                // Vérifier si la cible est morte ou invalide
+                if (this.targetAnimal == null || !this.targetAnimal.isAlive()) {
+                    LOGGER.debug("HuntForMeatGoal.tick: Target killed or lost. Switching to COLLECTING.");
+                    // --- FIX 2: Enregistrer la position AVANT de nullifier ---
+                    if (this.targetAnimal != null) {
+                        this.lastTargetPos = this.targetAnimal.blockPosition(); // Garder la VRAIE dernière position
+                    }
+                    // --- FIN FIX 2 ---
+                    // LivingEntity currentTarget = this.superMom.getTarget(); // Sauvegarder la cible actuelle (pas nécessaire si on nettoie après)
+                    this.targetAnimal = null; // Oublier notre cible passive
 
-               // Vérifier si une cible hostile plus prioritaire est apparue (géré par canContinueToUse et TargetSelector)
-               if (this.superMom.getTarget() != this.targetAnimal) {
-                    LOGGER.warn("HuntForMeatGoal.tick: SuperMom target ({}) differs from goal target ({}). Stopping hunt goal.",
-                                this.superMom.getTarget() != null ? this.superMom.getTarget().getName().getString() : "null",
-                                this.targetAnimal != null ? this.targetAnimal.getName().getString() : "null");
-                    // canContinueToUse devrait devenir false et arrêter le goal
+                    // Nettoyer la cible seulement si c'était la nôtre (évite d'effacer une cible hostile prioritaire)
+                    if (this.superMom.getTarget() == null || !(this.superMom.getTarget() instanceof Monster)) { // Check if the current target isn't a higher priority monster
+                         this.superMom.setTarget(null);
+                    }
+                    this.superMom.getNavigation().stop();
+                    this.currentState = State.COLLECTING;
+                    this.collectingTicks = MAX_COLLECTING_TICKS;
+                    collectDrops(); // Essayer de collecter immédiatement
                     return;
-               }
+                }
 
-               // **LOGIQUE D'ATTAQUE RETIRÉE**
-               // MeleeAttackGoal (Prio 1) gère maintenant le déplacement et l'attaque.
-               // On peut garder le look control.
-               this.superMom.getLookControl().setLookAt(this.targetAnimal, 30.0F, 30.0F);
+                // Vérifier si une cible hostile plus prioritaire est apparue (géré par canContinueToUse et TargetSelector)
+                if (this.superMom.getTarget() instanceof Monster && this.superMom.getTarget() != this.targetAnimal) {
+                     LOGGER.warn("HuntForMeatGoal.tick: SuperMom target ({}) differs from goal target ({}). Stopping hunt goal.",
+                              this.superMom.getTarget() != null ? this.superMom.getTarget().getName().getString() : "null",
+                              this.targetAnimal != null ? this.targetAnimal.getName().getString() : "null");
+                     // canContinueToUse devrait devenir false et arrêter le goal
+                     return;
+                }
+
+                // **LOGIQUE D'ATTAQUE RESTAURÉE (car MeleeAttackGoal retiré)**
+                // Si MeleeAttackGoal est ré-ajouté, cette partie peut être retirée
+                this.superMom.getLookControl().setLookAt(this.targetAnimal, 30.0F, 30.0F);
+                this.superMom.getNavigation().moveTo(this.targetAnimal, 1.2D); // Vitesse d'attaque
+
+                double distSq = this.superMom.distanceToSqr(this.targetAnimal.getX(), this.targetAnimal.getY(), this.targetAnimal.getZ());
+                double attackRangeSq = this.superMom.getMeleeAttackRangeSqr(this.targetAnimal); // Utiliser la portée de base
+
+                // Attaquer si à portée et cooldown d'attaque vanilla est prêt
+                if (distSq <= attackRangeSq && this.superMom.getAttackAnim(0.0f) == 0.0f) {
+                    this.superMom.swing(InteractionHand.MAIN_HAND);
+                    this.superMom.doHurtTarget(this.targetAnimal);
+                }
 
 
            } else if (this.currentState == State.COLLECTING) {
-               this.collectingTicks--;
-               if (this.collectingTicks <= 0) {
-                   // Le temps est écoulé, canContinueToUse arrêtera le goal
-                   return;
-               }
-               collectDrops(); // Continuer à collecter
+                this.collectingTicks--;
+                if (this.collectingTicks <= 0) {
+                    // Le temps est écoulé, canContinueToUse arrêtera le goal
+                    return;
+                }
+                collectDrops(); // Continuer à collecter
            }
        }
 
@@ -826,7 +847,9 @@ public class SuperMomEntity extends PathfinderMob {
        // RENOMMÉ et CORRIGÉ
        private ItemEntity findNearestDropFromKill(BlockPos center) {
             if (center == null) return null;
-            AABB searchBox = new AABB(center).inflate(5.0D); // Rayon de recherche autour du lieu de mort
+            // --- FIX 3: Augmenter le rayon de recherche ---
+            AABB searchBox = new AABB(center).inflate(7.0D); // ← 7 blocs au lieu de 5
+            // --- FIN FIX 3 ---
 
             // PRÉDICAT CORRIGÉ: N'exclut plus les items non-viande
             Predicate<ItemEntity> dropFromKillPredicate = entity ->
@@ -871,7 +894,7 @@ public class SuperMomEntity extends PathfinderMob {
            Player owner = this.superMom.getOwner();
            if (this.currentState != State.SEARCHING ||
                !this.superMom.level().isDay() ||
-               this.superMom.getTarget() != null ||
+               this.superMom.getTarget() instanceof Monster || // Check for Monster
                this.superMom.autonomousActionCooldown > 0 ||
                this.harvestCooldown > 0 || // Cooldown spécifique à la récolte
                owner == null ||
@@ -902,10 +925,10 @@ public class SuperMomEntity extends PathfinderMob {
                owner == null ||
                this.superMom.distanceToSqr(owner) > RESOURCE_GATHERING_RANGE_SQ * 1.5 ||
                (this.superMom.ownerHurtByTargetGoal != null && this.superMom.ownerHurtByTargetGoal.isActive) ||
-                this.superMom.getTarget() != null)
-               {
-                   return false;
-               }
+                this.superMom.getTarget() instanceof Monster) // Check for Monster
+                {
+                    return false;
+                }
 
            // Si collecting, continuer tant qu'il y a des drops et du temps
            if (this.currentState == State.COLLECTING) {
@@ -944,27 +967,27 @@ public class SuperMomEntity extends PathfinderMob {
        @Override
        public void tick() {
            if (this.currentState == State.MOVING_TO_CROP) {
-               super.tick(); // Gérer le mouvement
+                super.tick(); // Gérer le mouvement
 
-               if (this.isReachedTarget()) {
-                   LOGGER.debug("ForageCropGoal: Reached crop position {}. Switching to HARVESTING.", this.blockPos);
-                   this.currentState = State.HARVESTING;
-                   tryHarvest(); // Essayer de récolter
-               } else if (!this.isValidTarget(this.mob.level(), this.blockPos)) {
-                    LOGGER.debug("ForageCropGoal: Target {} became invalid during approach. Stopping.", this.blockPos);
-                    // canContinueToUse deviendra faux et arrêtera le goal
-               }
+                if (this.isReachedTarget()) {
+                    LOGGER.debug("ForageCropGoal: Reached crop position {}. Switching to HARVESTING.", this.blockPos);
+                    this.currentState = State.HARVESTING;
+                    tryHarvest(); // Essayer de récolter
+                } else if (!this.isValidTarget(this.mob.level(), this.blockPos)) {
+                     LOGGER.debug("ForageCropGoal: Target {} became invalid during approach. Stopping.", this.blockPos);
+                     // canContinueToUse deviendra faux et arrêtera le goal
+                }
            } else if (this.currentState == State.HARVESTING) {
-               // Normalement, tryHarvest change l'état. Si on est encore là, c'est un problème.
-               LOGGER.warn("ForageCropGoal: Still in HARVESTING state during tick. Forcing stop.");
-               this.currentState = State.SEARCHING; // Forcer l'arrêt pour éviter boucle infinie
+                // Normalement, tryHarvest change l'état. Si on est encore là, c'est un problème.
+                LOGGER.warn("ForageCropGoal: Still in HARVESTING state during tick. Forcing stop.");
+                this.currentState = State.SEARCHING; // Forcer l'arrêt pour éviter boucle infinie
            } else if (this.currentState == State.COLLECTING) {
-               this.collectingTicks--;
-               if (this.collectingTicks <= 0) {
-                   // Arrêt géré par canContinueToUse
-                   return;
-               }
-               collectCropDrops(); // Continuer la collecte
+                this.collectingTicks--;
+                if (this.collectingTicks <= 0) {
+                    // Arrêt géré par canContinueToUse
+                    return;
+                }
+                collectCropDrops(); // Continuer la collecte
            }
        }
 
@@ -979,54 +1002,54 @@ public class SuperMomEntity extends PathfinderMob {
 
            BlockState blockState = level.getBlockState(targetPos);
            if (this.isValidTarget(level, targetPos)) {
-               LOGGER.debug("ForageCropGoal: Harvesting mature crop {} at {}.", blockState.getBlock().getDescriptionId(), targetPos);
+                LOGGER.debug("ForageCropGoal: Harvesting mature crop {} at {}.", blockState.getBlock().getDescriptionId(), targetPos);
 
-               // Simuler la récolte
-                this.superMom.swing(InteractionHand.MAIN_HAND); // Animation
-               level.playSound(null, targetPos, SoundEvents.CROP_BREAK, SoundSource.BLOCKS, 1.0F, 1.0F);
+                // Simuler la récolte
+                 this.superMom.swing(InteractionHand.MAIN_HAND); // Animation
+                level.playSound(null, targetPos, SoundEvents.CROP_BREAK, SoundSource.BLOCKS, 1.0F, 1.0F);
 
-               // Obtenir les drops SANS casser le bloc (pour que SuperMom puisse les ramasser)
-               LootParams.Builder lootparams$builder = (new LootParams.Builder(serverLevel))
-                   .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(targetPos))
-                   .withParameter(LootContextParams.TOOL, ItemStack.EMPTY) // Outil vide
-                   .withOptionalParameter(LootContextParams.THIS_ENTITY, this.superMom)
-                   .withOptionalParameter(LootContextParams.BLOCK_ENTITY, level.getBlockEntity(targetPos));
-               java.util.List<ItemStack> drops = blockState.getDrops(lootparams$builder);
+                // Obtenir les drops SANS casser le bloc (pour que SuperMom puisse les ramasser)
+                LootParams.Builder lootparams$builder = (new LootParams.Builder(serverLevel))
+                    .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(targetPos))
+                    .withParameter(LootContextParams.TOOL, ItemStack.EMPTY) // Outil vide
+                    .withOptionalParameter(LootContextParams.THIS_ENTITY, this.superMom)
+                    .withOptionalParameter(LootContextParams.BLOCK_ENTITY, level.getBlockEntity(targetPos));
+                java.util.List<ItemStack> drops = blockState.getDrops(lootparams$builder);
 
-               // Casser le bloc APRÈS avoir calculé les drops
-               level.destroyBlock(targetPos, false, this.superMom); // false = ne pas faire dropper les items par le jeu
+                // Casser le bloc APRÈS avoir calculé les drops
+                level.destroyBlock(targetPos, false, this.superMom); // false = ne pas faire dropper les items par le jeu
 
-               // Faire apparaître les drops calculés
-               boolean spawnedDrops = false;
-               for(ItemStack drop : drops) {
-                   if (!drop.isEmpty()) {
-                       ItemEntity itementity = new ItemEntity(level, targetPos.getX() + 0.5D, targetPos.getY() + 0.2D, targetPos.getZ() + 0.5D, drop.copy());
-                       itementity.setPickUpDelay(0); // Ramassable immédiatement
-                       level.addFreshEntity(itementity);
-                       spawnedDrops = true;
-                   }
-               }
+                // Faire apparaître les drops calculés
+                boolean spawnedDrops = false;
+                for(ItemStack drop : drops) {
+                    if (!drop.isEmpty()) {
+                        ItemEntity itementity = new ItemEntity(level, targetPos.getX() + 0.5D, targetPos.getY() + 0.2D, targetPos.getZ() + 0.5D, drop.copy());
+                        itementity.setPickUpDelay(0); // Ramassable immédiatement
+                        level.addFreshEntity(itementity);
+                        spawnedDrops = true;
+                    }
+                }
 
-               // TODO: Logique de replantation optionnelle ici
-               // Block replantBlock = null;
-               // if (blockState.is(Blocks.WHEAT)) replantBlock = Blocks.WHEAT;
-               // ... etc ...
-               // if (replantBlock != null && superMom.hasItemInInventory(replantBlock.asItem())) {
-               //    level.setBlock(targetPos, replantBlock.defaultBlockState(), 3);
-               //    superMom.removeItemFromInventory(replantBlock.asItem());
-               // }
+                // TODO: Logique de replantation optionnelle ici
+                // Block replantBlock = null;
+                // if (blockState.is(Blocks.WHEAT)) replantBlock = Blocks.WHEAT;
+                // ... etc ...
+                // if (replantBlock != null && superMom.hasItemInInventory(replantBlock.asItem())) {
+                //    level.setBlock(targetPos, replantBlock.defaultBlockState(), 3);
+                //    superMom.removeItemFromInventory(replantBlock.asItem());
+                // }
 
-               this.lastHarvestPos = targetPos;
-               this.currentState = State.COLLECTING;
-               this.collectingTicks = spawnedDrops ? MAX_COLLECTING_TICKS : 0;
-               this.blockPos = null; // La cible n'existe plus
-               if (spawnedDrops) {
-                   collectCropDrops(); // Essayer de collecter
-               }
+                this.lastHarvestPos = targetPos;
+                this.currentState = State.COLLECTING;
+                this.collectingTicks = spawnedDrops ? MAX_COLLECTING_TICKS : 0;
+                this.blockPos = null; // La cible n'existe plus
+                if (spawnedDrops) {
+                    collectCropDrops(); // Essayer de collecter
+                }
 
            } else {
-               LOGGER.debug("ForageCropGoal.tryHarvest: Crop at {} is no longer valid.", targetPos);
-               this.currentState = State.SEARCHING;
+                LOGGER.debug("ForageCropGoal.tryHarvest: Crop at {} is no longer valid.", targetPos);
+                this.currentState = State.SEARCHING;
            }
        }
 
@@ -1107,12 +1130,12 @@ public class SuperMomEntity extends PathfinderMob {
 
        @Override
        public boolean canUse() {
-           // Conditions de base : pas de cible, cooldown passé
-           if (this.superMom.getTarget() != null || this.superMom.autonomousActionCooldown > 0) {
-               return false;
+           // Conditions de base : pas de cible hostile, cooldown passé
+           if (this.superMom.getTarget() instanceof Monster || this.superMom.autonomousActionCooldown > 0) {
+                return false;
            }
            if (--this.timeUntilNextCheck > 0) {
-               return false;
+                return false;
            }
            this.timeUntilNextCheck = CHECK_INTERVAL + this.superMom.random.nextInt(CHECK_INTERVAL / 2);
            this.foundNearbyFood = false; // Reset flag
@@ -1120,9 +1143,9 @@ public class SuperMomEntity extends PathfinderMob {
            // Vérifier s'il y a de la nourriture au sol à proximité immédiate
            ItemEntity nearbyFood = findNearestEdibleItem();
            if (nearbyFood != null) {
-               LOGGER.trace("CheckSuppliesGoal.canUse: Found nearby edible item: {}", nearbyFood.getItem().getDescriptionId());
-               this.foundNearbyFood = true;
-               return true; // Priorité au ramassage
+                LOGGER.trace("CheckSuppliesGoal.canUse: Found nearby edible item: {}", nearbyFood.getItem().getDescriptionId());
+                this.foundNearbyFood = true;
+                return true; // Priorité au ramassage
            }
 
            // Ne plus vérifier les niveaux d'inventaire ici, les goals spécifiques le font
@@ -1137,12 +1160,12 @@ public class SuperMomEntity extends PathfinderMob {
        @Override
        public void start() {
            if (this.foundNearbyFood) {
-               LOGGER.debug("CheckSuppliesGoal started: Found nearby food. Triggering gatherFood.");
-               this.superMom.gatherFood(); // Déclencher le goal de ramassage
-               this.superMom.resetAutonomousCooldown(); // Mettre le cooldown après avoir agi
+                LOGGER.debug("CheckSuppliesGoal started: Found nearby food. Triggering gatherFood.");
+                this.superMom.gatherFood(); // Déclencher le goal de ramassage
+                this.superMom.resetAutonomousCooldown(); // Mettre le cooldown après avoir agi
            } else {
-               // Ne devrait pas arriver si canUse est correct
-               LOGGER.warn("CheckSuppliesGoal started but foundNearbyFood was false?");
+                // Ne devrait pas arriver si canUse est correct
+                LOGGER.warn("CheckSuppliesGoal started but foundNearbyFood was false?");
            }
        }
 
@@ -1181,31 +1204,48 @@ public class SuperMomEntity extends PathfinderMob {
         LOGGER.debug("Registering goals for SuperMomEntity");
         // Priorités hautes : Actions essentielles / Réactions immédiates
         this.goalSelector.addGoal(0, new FloatGoal(this)); // Prio 0: Nager (essentiel)
-        // Ajout d'un MeleeAttackGoal générique pour gérer l'attaque une fois la cible définie par TargetGoals
-        this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.2D, false)); // Prio 1: Attaquer la cible (vitesse 1.2, ne s'arrête pas si la cible fuit)
 
-        // Priorités moyennes : Assistance au joueur et Collecte de ressources autonome
-        this.goalSelector.addGoal(3, new HealPlayerGoal(this));     // Prio 3: Soigner le joueur (important si besoin)
-        this.goalSelector.addGoal(4, new FeedPlayerGoal(this));     // Prio 4: Nourrir le joueur (important si besoin)
-        this.goalSelector.addGoal(5, new HuntForMeatGoal(this));    // Prio 5: Chasser pour viande (autonome)
-        this.goalSelector.addGoal(6, new ForageCropGoal(this, 1.0D, 16)); // Prio 6: Récolter cultures (autonome)
-        this.goalSelector.addGoal(7, new GatherFoodGoal(this, 1.0D, 8)); // Prio 7: Ramasser items au sol (activé par CheckSupplies)
+        // --- FIX 1: Ajouter MeleeAttackGoal pour les monstres ---
+        // Prio 1: attaquer uniquement les mobs hostiles
+        this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.25D, true) {
+            @Override                                // ← ne pas attaquer les animaux
+            public boolean canUse() {
+                // Only activate if the mob has a target AND that target is a Monster
+                return super.canUse() && this.mob.getTarget() instanceof Monster;
+            }
+            @Override
+            public boolean canContinueToUse() {
+                 // Continue only if the target is still a Monster
+                 return super.canContinueToUse() && this.mob.getTarget() instanceof Monster;
+            }
+        });
+        // --- FIN FIX 1 ---
+
+        // --- FIX 4: Prioriser soins & nourriture ---
+        this.goalSelector.addGoal(2, new HealPlayerGoal(this));   // Prio 2: Soigner le joueur (important si besoin)
+        this.goalSelector.addGoal(3, new FeedPlayerGoal(this));   // Prio 3: Nourrir le joueur (important si besoin)
+        // --- FIN FIX 4 ---
+
+        // Priorités suivantes ajustées
+        this.goalSelector.addGoal(4, new HuntForMeatGoal(this));     // Prio 4: Chasser pour viande (autonome)
+        this.goalSelector.addGoal(5, new ForageCropGoal(this, 1.0D, 16)); // Prio 5: Récolter cultures (autonome)
+        this.goalSelector.addGoal(6, new GatherFoodGoal(this, 1.0D, 8)); // Prio 6: Ramasser items au sol (activé par CheckSupplies)
 
         // Priorités basses : Comportements par défaut / Idle
-        this.goalSelector.addGoal(8, new FollowPlayerGoal(this, 1.0D, 10.0F, 3.0F)); // Prio 8: Suivre joueur si rien d'autre (stopDist = 3)
-        this.goalSelector.addGoal(9, new WaterAvoidingRandomStrollGoal(this, 1.0D)); // Prio 9: Se balader
-        this.goalSelector.addGoal(10, new LookAtPlayerGoal(this, Player.class, 8.0F)); // Prio 10: Regarder joueur
-        this.goalSelector.addGoal(11, new RandomLookAroundGoal(this)); // Prio 11: Regarder autour
-        this.goalSelector.addGoal(12, new CheckSuppliesGoal(this)); // Prio 12: Vérifier items au sol (très basse prio)
+        this.goalSelector.addGoal(7, new FollowPlayerGoal(this, 1.0D, 10.0F, 3.0F)); // Prio 7: Suivre joueur si rien d'autre (stopDist = 3)
+        this.goalSelector.addGoal(8, new WaterAvoidingRandomStrollGoal(this, 1.0D)); // Prio 8: Se balader
+        this.goalSelector.addGoal(9, new LookAtPlayerGoal(this, Player.class, 8.0F)); // Prio 9: Regarder joueur
+        this.goalSelector.addGoal(10, new RandomLookAroundGoal(this)); // Prio 10: Regarder autour
+        this.goalSelector.addGoal(11, new CheckSuppliesGoal(this)); // Prio 11: Vérifier items au sol (très basse prio)
 
         // Initialisation des goals spécifiques (ne sont pas ajoutés ici, mais activés par les actions)
         this.goHomeGoal = new GoHomeGoal(this, 1.0D, 16); // Sera ajouté dynamiquement si besoin
-        // this.gatherFoodGoal = new GatherFoodGoal(this, 1.0D, 16); // Déjà ajouté avec priorité 7
+        // this.gatherFoodGoal = new GatherFoodGoal(this, 1.0D, 16); // Déjà ajouté avec priorité 6
 
         // --- Target Goals (Qui attaquer ?) ---
         LOGGER.debug("Registering target goals for SuperMomEntity");
         this.ownerHurtByTargetGoal = new OwnerHurtByTargetGoal(this); // Instancier pour référence
-        this.targetSelector.addGoal(0, this.ownerHurtByTargetGoal);             // Prio 0: Défendre propriétaire
+        this.targetSelector.addGoal(0, this.ownerHurtByTargetGoal);          // Prio 0: Défendre propriétaire
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers()); // Prio 1: Riposter si attaquée
         // Priorité 2: Attaquer hostiles proches du joueur
         final double hostileNearOwnerRange = 20.0; // Rayon de défense active autour du joueur
@@ -1284,8 +1324,8 @@ public class SuperMomEntity extends PathfinderMob {
         }
 
         // --- Auto-soin autonome ---
-        // S'exécute seulement si pas de cible et cooldown OK
-        if (this.autonomousActionCooldown <= 0 && this.getTarget() == null) {
+        // S'exécute seulement si pas de cible hostile et cooldown OK
+        if (this.autonomousActionCooldown <= 0 && !(this.getTarget() instanceof Monster)) {
             float healthPercent = this.getHealth() / this.getMaxHealth();
             if (healthPercent < AUTONOMOUS_HEAL_THRESHOLD_PERCENT && !this.hasEffect(MobEffects.HEAL) && !this.hasEffect(MobEffects.REGENERATION)) {
                 // LOGGER.debug("Autonomous Check: Low health detected ({}%). Attempting self-heal.", String.format("%.2f", healthPercent * 100));
@@ -1322,12 +1362,12 @@ public class SuperMomEntity extends PathfinderMob {
 
            // Utiliser randomTeleport pour une téléportation plus sûre
            if (stateBelow.entityCanStandOn(level, posBelow, this) && level.noCollision(this, this.getBoundingBox().move(Vec3.atCenterOf(targetPos).subtract(this.position())))) {
-               if (this.randomTeleport(targetPos.getX() + 0.5D, targetPos.getY(), targetPos.getZ() + 0.5D, true)) {
-                   LOGGER.debug("Teleporting SuperMom from {} to {} near owner {}", this.position(), Vec3.atCenterOf(targetPos), owner.getName().getString());
-                   this.getNavigation().stop();
-                   // level.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENDERMAN_TELEPORT, this.getSoundSource(), 1.0F, 1.0F);
-                   return; // Succès
-               }
+                if (this.randomTeleport(targetPos.getX() + 0.5D, targetPos.getY(), targetPos.getZ() + 0.5D, true)) {
+                    LOGGER.debug("Teleporting SuperMom from {} to {} near owner {}", this.position(), Vec3.atCenterOf(targetPos), owner.getName().getString());
+                    this.getNavigation().stop();
+                    // level.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENDERMAN_TELEPORT, this.getSoundSource(), 1.0F, 1.0F);
+                    return; // Succès
+                }
            }
        }
        LOGGER.debug("Failed to find suitable teleport location near owner {}", owner.getName().getString());
@@ -1436,9 +1476,9 @@ public class SuperMomEntity extends PathfinderMob {
                 this.level().addFreshEntity(itementity);
                 LOGGER.info("Dropped {} for player {} (inventory full?)", foodStack.getDescriptionId(), player.getName().getString());
            } else {
-               LOGGER.info("Gave {} to player {}", foodStack.getDescriptionId(), player.getName().getString());
-               // Jouer un son de succès ?
-               player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.NEUTRAL, 0.2F, ((player.getRandom().nextFloat() - player.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F);
+                LOGGER.info("Gave {} to player {}", foodStack.getDescriptionId(), player.getName().getString());
+                // Jouer un son de succès ?
+                player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.NEUTRAL, 0.2F, ((player.getRandom().nextFloat() - player.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F);
            }
        } else {
            LOGGER.warn("Action 'feedPlayer': No food found in inventory.");
@@ -1489,13 +1529,12 @@ public class SuperMomEntity extends PathfinderMob {
             LOGGER.debug("Deactivating GoHomeGoal due to follow command.");
             this.goHomeGoal.stop();
         }
-        // Ne pas effacer la cible ici si OwnerHurtByTarget est actif
-        // CORRECTION: Utiliser .isActive
-        if (this.ownerHurtByTargetGoal == null || !this.ownerHurtByTargetGoal.isActive) {
-            this.setTarget(null);
-            LOGGER.debug("Cleared attack target, relying on FollowPlayerGoal.");
+        // Ne pas effacer la cible ici si OwnerHurtByTarget est actif ou si la cible actuelle est un monstre
+        if ((this.ownerHurtByTargetGoal == null || !this.ownerHurtByTargetGoal.isActive) && !(this.getTarget() instanceof Monster)) {
+             this.setTarget(null);
+             LOGGER.debug("Cleared non-monster attack target, relying on FollowPlayerGoal.");
         } else {
-             LOGGER.debug("Not clearing target, OwnerHurtByTargetGoal is active.");
+             LOGGER.debug("Not clearing target, OwnerHurtByTargetGoal is active or target is a Monster.");
         }
     }
 
@@ -1507,8 +1546,8 @@ public class SuperMomEntity extends PathfinderMob {
             // Ajouter le goal s'il n'est pas déjà actif (ou le redémarrer)
             if (!this.goalSelector.getRunningGoals().anyMatch(goal -> goal.getGoal() == this.goHomeGoal)) {
                 LOGGER.debug("Adding GoHomeGoal to active goals.");
-                // Priorité 2 semble haute si on veut que l'assistance au joueur prime. Mettons plus bas.
-                this.goalSelector.addGoal(8, this.goHomeGoal); // Priorité plus basse que FollowPlayer
+                // Priorité 8 (après follow) semble raisonnable pour une commande explicite
+                this.goalSelector.addGoal(8, this.goHomeGoal);
             }
             // Forcer le démarrage si pas déjà en cours (parfois addGoal ne suffit pas immédiatement)
             if (!this.goHomeGoal.isGoalActive()) { // Use isGoalActive()
@@ -1564,15 +1603,15 @@ public class SuperMomEntity extends PathfinderMob {
 
                 java.util.List<MobEffectInstance> effects = PotionUtils.getMobEffects(potionStack);
                  if (!effects.isEmpty()) {
-                     for(MobEffectInstance effectinstance : effects) {
-                         this.addEffect(new MobEffectInstance(effectinstance.getEffect(), 1, effectinstance.getAmplifier()));
-                     }
-                     inventory.setItem(potionSlot, new ItemStack(Items.GLASS_BOTTLE));
-                     LOGGER.info("Used healing potion on self.");
-                     level().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GENERIC_DRINK, SoundSource.NEUTRAL, 1.0F, level().random.nextFloat() * 0.1F + 0.9F);
-                 } else {
-                      LOGGER.warn("Self-heal potion {} had no effects?", potionStack.getDescriptionId());
+                      for(MobEffectInstance effectinstance : effects) {
+                           this.addEffect(new MobEffectInstance(effectinstance.getEffect(), 1, effectinstance.getAmplifier()));
+                      }
                       inventory.setItem(potionSlot, new ItemStack(Items.GLASS_BOTTLE));
+                      LOGGER.info("Used healing potion on self.");
+                      level().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GENERIC_DRINK, SoundSource.NEUTRAL, 1.0F, level().random.nextFloat() * 0.1F + 0.9F);
+                 } else {
+                       LOGGER.warn("Self-heal potion {} had no effects?", potionStack.getDescriptionId());
+                       inventory.setItem(potionSlot, new ItemStack(Items.GLASS_BOTTLE));
                  }
             } else {
                 LOGGER.warn("Action 'selfHeal': No healing potion found in inventory.");
@@ -1585,12 +1624,15 @@ public class SuperMomEntity extends PathfinderMob {
     // Méthode appelée par CheckSuppliesGoal pour ramasser items au sol
     public void gatherFood() {
         LOGGER.info("Action: Attempting to gather nearby loose food");
-        this.setTarget(null); // Pas d'attaque pendant le ramassage
+        // Ne pas effacer la cible si c'est un monstre ou si on défend le joueur
+        if (!(this.getTarget() instanceof Monster) && (this.ownerHurtByTargetGoal == null || !this.ownerHurtByTargetGoal.isActive)) {
+            this.setTarget(null);
+        }
         if (this.goHomeGoal != null && this.goHomeGoal.isGoalActive()) { // Use isGoalActive()
             LOGGER.debug("Deactivating GoHomeGoal due to gatherFood command.");
             this.goHomeGoal.stop();
         }
-        // Le goal GatherFoodGoal (priorité 7) devrait s'activer via son canUse() si les conditions sont bonnes
+        // Le goal GatherFoodGoal (priorité 6) devrait s'activer via son canUse() si les conditions sont bonnes
         LOGGER.debug("GatherFood action requested. Goal state managed by selector.");
         // On pourrait forcer son activation si besoin, mais laissons le sélecteur faire
         this.resetAutonomousCooldown(); // Mettre le cooldown après avoir décidé de ramasser
