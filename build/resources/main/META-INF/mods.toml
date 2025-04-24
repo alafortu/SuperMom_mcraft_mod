@@ -1,0 +1,41 @@
+# This is the mods.toml file using placeholders for build script expansion.
+
+modLoader="javafml" #mandatory
+# Use the placeholder defined in gradle.properties
+loaderVersion="[47,)" #mandatory
+# Use the placeholder defined in gradle.properties
+license="ARR - All Rights Reserved"
+# You can keep this hardcoded or make it a property if you prefer
+issueTrackerURL="https://github.com/alafortu/SuperMom_mcraft_mod/issues" #optional
+
+[[mods]] #mandatory
+# Use the placeholder defined in gradle.properties
+modId="supermom" #mandatory
+# Use the placeholder defined in gradle.properties - THIS replaces file.jarVersion here
+version="1.0.0" #mandatory
+# Use the placeholder defined in gradle.properties
+displayName="SuperMom" #mandatory
+# You can keep this hardcoded or make it a property if you prefer
+displayURL="https://github.com/alafortu/SuperMom_mcraft_mod" #optional
+# Use the placeholder defined in gradle.properties
+authors="alafortu" #optional
+# Use the placeholder defined in gradle.properties
+description='''An intelligent AI companion who is funny and fiercely protective. Your SuperMom! Built with Forge for Minecraft.''' #mandatory
+
+# Specify required dependencies using placeholders
+# IMPORTANT: The dependency block name itself must use the placeholder!
+[[dependencies.supermom]] #Optional but standard
+    modId="forge" #mandatory
+    mandatory=true #mandatory
+    # Use the placeholder defined in gradle.properties
+    versionRange="[47,)" #mandatory
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.supermom]] #Optional but standard
+    modId="minecraft" #mandatory
+    mandatory=true #mandatory
+    # Use the placeholder defined in gradle.properties
+    versionRange="[1.20.1,1.21)" #mandatory
+    ordering="NONE"
+    side="BOTH"

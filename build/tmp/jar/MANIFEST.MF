@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+Specification-Title: supermom
+Specification-Vendor: alafortu
+Specification-Version: 1
+Implementation-Title: SuperMom_mcraft_mod
+Implementation-Version: 1.0.0
+Implementation-Vendor: alafortu
+Implementation-Timestamp: 2025-04-21T14:38:08-0400
+
